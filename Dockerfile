@@ -96,7 +96,7 @@ RUN apt-get install -qy 	check \
 	ctags \
         ntpdate
 RUN apt-get -qy install libffi-dev libxslt1-dev
-RUN pip install paramiko
+RUN pip install paramiko==1.18.0
 RUN pip install pyroute2
 RUN update-alternatives --set liblapack.so /usr/lib/atlas-base/atlas/liblapack.so
 
