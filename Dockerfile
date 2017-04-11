@@ -1,5 +1,6 @@
 ## build : docker build -t openair4g .
 ## run :   docker run --net=host --rm --privileged -v /dev/bus/usb:/dev/bus/usb -it openair4g
+## run your own config and with a PCAP :   docker run --rm --net=host --privileged -v /dev/bus/usb:/dev/bus/usb -v /YOURCONFIGDIRECTORY:/root --entrypoint /openairinterface5g/targets/bin/lte-softmodem.Rel14 openair4g -P /root/capture.pcap  -O /root/enb.conf
 FROM ubuntu:14.04
 MAINTAINER Yan Grunenberger <yan@grunenberger.net>
 ENV DEBIAN_FRONTEND noninteractive
@@ -12,7 +13,7 @@ RUN apt-get -yq install autoconf build-essential libusb-1.0-0-dev cmake wget pkg
 RUN apt-get -yq install python-mako python-requests 
 
 # Fetching the uhd 3.010.001 driver for our USRP SDR card 
-RUN wget http://files.ettus.com/binaries/uhd/uhd_003.010.001.000-release/uhd-3.10.1.0.tar.gz && tar xvzf uhd-3.10.1.0.tar.gz && cd uhd-3.10.1.HEAD && mkdir build && cd build && cmake ../ && make && make install && ldconfig && python /usr/local/lib/uhd/utils/uhd_images_downloader.py
+RUN wget http://files.ettus.com/binaries/uhd/uhd_003.010.001.001-release/uhd-3.10.1.1.tar.gz && tar xvzf uhd-3.10.1.1.tar.gz && cd UHD_3.10.1.1_release && mkdir build && cd build && cmake ../ && make && make install && ldconfig && python /usr/local/lib/uhd/utils/uhd_images_downloader.py
 
 # Dependencies for OpenAirInterface software
 RUN apt-get -yq install autoconf  \
@@ -116,4 +117,4 @@ RUN cd /openairinterface5g && /bin/bash -c "source oaienv" && cd cmake_targets &
 ADD enb.conf /root/enb.conf
 
 # Run directly the eNodeB code 
-ENTRYPOINT /openairinterface5g/targets/bin/lte-softmodem.Rel10 -O /root/enb.conf
+ENTRYPOINT /openairinterface5g/targets/bin/lte-softmodem.Rel14 -O /root/enb.conf
