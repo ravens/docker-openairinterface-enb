@@ -1,0 +1,12 @@
+version: '2'
+
+services:
+
+  oaienb:
+    build: ./
+    container_name: oaienb
+    privileged: true
+    network_mode: "host"
+    volumes:
+      - /dev/bus/usb
+      - ./:/config

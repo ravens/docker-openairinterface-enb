@@ -1,7 +1,4 @@
-## build : docker build -t openair4g .
-## run :   docker run --net=host --rm --privileged -v /dev/bus/usb:/dev/bus/usb -it openair4g
-## run your own config and with a PCAP :   docker run --rm --net=host --privileged -v /dev/bus/usb:/dev/bus/usb -v /YOURCONFIGDIRECTORY:/root --entrypoint /openairinterface5g/targets/bin/lte-softmodem.Rel14 openair4g -P /root/capture.pcap  -O /root/enb.conf
-FROM ubuntu:14.04
+FROM ubuntu:16.04
 MAINTAINER Yan Grunenberger <yan@grunenberger.net>
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update
@@ -39,7 +36,6 @@ RUN apt-get -yq install autoconf  \
 	iptables-dev \
 	libatlas-base-dev \
 	libatlas-dev \
-	libblas3gf \
 	libblas-dev \
 	libconfig8-dev \
 	libforms-bin \
@@ -51,17 +47,15 @@ RUN apt-get -yq install autoconf  \
 	libidn11-dev \
 	libmysqlclient-dev  \
 	liboctave-dev \
-	libpgm-5.1 \
 	libpgm-dev \
 	libsctp1  \
 	libsctp-dev  \
 	libssl-dev  \
-	libtasn1-3-dev  \
+	libtasn1-dev  \
 	libtool  \
 	libusb-1.0-0-dev \
 	libxml2 \
 	libxml2-dev  \
-	linux-headers-`uname -r` \
 	mscgen  \
 	octave \
 	octave-signal \
@@ -97,24 +91,51 @@ RUN apt-get install -qy 	check \
 	ctags \
         ntpdate
 RUN apt-get -qy install libffi-dev libxslt1-dev
-RUN pip install paramiko==1.18.0
+RUN pip install --upgrade pip
+RUN pip install paramiko==1.17.1
 RUN pip install pyroute2
 RUN update-alternatives --set liblapack.so /usr/lib/atlas-base/atlas/liblapack.so
 
-# Fetching the SSL certificate of Eurecom
-RUN echo -n | openssl s_client -showcerts -connect gitlab.eurecom.fr:443 2>/dev/null | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' >> /etc/ssl/certs/ca-certificates.crt
+# ASN1 compiler with Eurecom fixes
+WORKDIR /root
+RUN git clone https://gitlab.eurecom.fr/oai/asn1c.git 
+RUN cd asn1c && ./configure && make -j`nproc` && make install
 
 # Fetching the develop repository
-RUN git clone https://gitlab.eurecom.fr/oai/openairinterface5g.git && cd openairinterface5g && git checkout develop 
+RUN git clone https://gitlab.eurecom.fr/oai/openairinterface5g.git 
+RUN cd openairinterface5g && git checkout develop 
 
-# ASN1 compiler with Eurecom fixes
-RUN rm -rf /tmp/asn1c && GIT_SSL_NO_VERIFY=true git clone https://gitlab.eurecom.fr/oai/asn1c.git /tmp/asn1c && cd /tmp/asn1c && ./configure && make -j`nproc` && make install
+# Compile
+WORKDIR /root/openairinterface5g
+RUN cd cmake_targets && mkdir -p lte_build_oai/build 
+WORKDIR /root/openairinterface5g/cmake_targets/lte_build_oai
 
-# Building the OpenAirInterface eNodeB for USRP
-RUN cd /openairinterface5g && /bin/bash -c "source oaienv" && cd cmake_targets && ./build_oai -I -w USRP --eNB -x
+# CmakeLists generation
+RUN echo "cmake_minimum_required(VERSION 2.8)"   					> CMakeLists.txt
+RUN echo "set ( CMAKE_BUILD_TYPE \"\" )" 							>> CMakeLists.txt
+RUN echo "set ( CFLAGS_PROCESSOR_USER \"\" )" 						>> CMakeLists.txt
+RUN echo "set ( RRC_ASN1_VERSION \"Rel14\")" 						>> CMakeLists.txt
+RUN echo "set ( ENABLE_VCD_FIFO \"False\")"     					>> CMakeLists.txt
+RUN echo "set ( RF_BOARD \"OAI_USRP\")" 							>> CMakeLists.txt
+RUN echo "set ( TRANSP_PRO \"None\")" 								>> CMakeLists.txt
+RUN echo "set(PACKAGE_NAME \"lte-softmodem\")" 						>> CMakeLists.txt
+RUN echo "set (DEADLINE_SCHEDULER \"False\" )" 						>> CMakeLists.txt
+RUN echo "set (CPU_AFFINITY \"False\" )" 							>> CMakeLists.txt
+RUN echo "set ( T_TRACER \"False\" )"              					>> CMakeLists.txt
+RUN echo "set (UE_AUTOTEST_TRACE \"False\")"     					>> CMakeLists.txt
+RUN echo "set (UE_DEBUG_TRACE \"False\")"    						>> CMakeLists.txt
+RUN echo "set (UE_TIMING_TRACE \"False\")" 							>> CMakeLists.txt
+RUN echo "set (DISABLE_LOG_X \"False\")"   							>> CMakeLists.txt
+RUN echo 'include(${CMAKE_CURRENT_SOURCE_DIR}/../CMakeLists.txt)'   >> CMakeLists.txt
+
+WORKDIR /root/openairinterface5g/cmake_targets/lte_build_oai/build
+RUN OPENAIR_HOME=/root/openairinterface5g OPENAIR_DIR=$OPENAIR_HOME OPENAIR1_DIR=$OPENAIR_HOME/openair1 OPENAIR2_DIR=$OPENAIR_HOME/openair2 OPENAIR3_DIR=$OPENAIR_HOME/openair3 OPENAIR_TARGETS=$OPENAIR_HOME/targets cmake ../
+RUN make -j`nproc` lte-softmodem
+RUN make -j`nproc` oai_usrpdevif
+RUN ln -sf liboai_usrpdevif.so liboai_device.so
 
 # Add a sample configuration file
-ADD enb.conf /root/enb.conf
+ADD enb.conf /config/enb.conf
 
 # Run directly the eNodeB code 
-ENTRYPOINT /openairinterface5g/targets/bin/lte-softmodem.Rel14 -O /root/enb.conf
+ENTRYPOINT ["/root/openairinterface5g/cmake_targets/lte_build_oai/build/lte-softmodem", "-O", "/config/enb.conf"]
