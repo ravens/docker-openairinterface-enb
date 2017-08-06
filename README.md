@@ -1,5 +1,5 @@
 # docker-openairinterface-enb
-Recipe to build and run a 4G SDR eNodeB from [OpenAirInterface project](https://gitlab.eurecom.fr/oai/openairinterface5g/wikis/home) develop code base. Kernel tweaks might be required on the host machine.
+Simple recipe to build and run a 4G SDR eNodeB from [OpenAirInterface project](https://gitlab.eurecom.fr/oai/openairinterface5g/wikis/home) develop code base. Kernel tweaks might be required on the host machine. A working EPC reachable from the host and a USRP is required in this particular config.
 
 ## Configure 
 
@@ -16,8 +16,8 @@ Variables for 4G EPC:
 
 ## Build
 
-> docker build -t openair4g .
+> docker-compose build --no-cache
 
 ## Run 
 
-> docker run --net=host --rm --privileged -v /dev/bus/usb:/dev/bus/usb -it openair4g
+> docker-compose up 
