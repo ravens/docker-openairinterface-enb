@@ -1,6 +1,8 @@
 # docker-openairinterface-enb
 Simple recipe to build and run a 4G SDR eNodeB from [OpenAirInterface project](https://gitlab.eurecom.fr/oai/openairinterface5g/wikis/home) develop code base. Kernel tweaks might be required on the host machine. A working EPC reachable from the host and a USRP is required in this particular config.
 
+[![Build Status](https://travis-ci.org/ravens/docker-openairinterface-enb.svg?branch=master)](https://travis-ci.org/ravens/docker-openairinterface-enb)
+
 ## Configure 
 
 Edit enb.conf to reflect your IP and cellular network configuration.
