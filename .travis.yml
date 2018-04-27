@@ -3,6 +3,7 @@ sudo: required
 dist: xenial
 
 install:
+  - sudo apt-get -qq update
   - sudo apt-get -qy install docker.io docker-compose
 
 script:
