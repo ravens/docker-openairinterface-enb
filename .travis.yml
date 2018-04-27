@@ -3,7 +3,7 @@ sudo: required
 dist: xenial
 
 install:
-  - sudo rm /var/lib/apt/lists/lock /var/cache/apt/archives/lock /var/cache/apt/archives/lock
+  - sudo rm -Rf /var/lib/apt/lists/lock /var/cache/apt/archives/lock /var/cache/apt/archives/lock
   - sudo apt-get -qq update
   - sudo apt-get -qy install docker.io docker-compose
 
